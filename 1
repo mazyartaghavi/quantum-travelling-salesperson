@@ -1,0 +1,51 @@
+import dimod
+from dwave.system import DWaveSampler, EmbeddingComposite
+from itertools import permutations
+
+# Define the graph as an adjacency matrix
+graph = [
+    [0, 2, 9, 10],
+    [1, 0, 6, 4],
+    [15, 7, 0, 8],
+    [6, 3, 12, 0]
+]
+
+# Define the number of cities in the TSP
+num_cities = len(graph)
+
+# Define the QUBO dictionary
+qubo = {}
+for i in range(num_cities):
+    for j in range(num_cities):
+        if i != j:
+            for k in range(num_cities):
+                qubo[(i, j), (k, (k + 1) % num_cities)] = graph[i][j] if i != k else 0
+
+# Create a QUBO model
+model = dimod.BinaryQuadraticModel.from_qubo(qubo)
+
+# Define the QAOA parameters
+num_steps = 3
+optimizer = dimod.ExactSolver()
+
+# Solve the QUBO model using QAOA
+sampleset = dimod.QAOA(model, optimizer, num_steps=num_steps).sample()
+
+# Find the minimum energy solution
+min_energy = sampleset.first.energy
+min_solution = sampleset.first.sample
+
+# Convert the binary solution to a permutation
+permutation = []
+for i in range(num_cities):
+    for j in range(num_cities):
+        if min_solution[(i, j)] == 1:
+            permutation.append(j)
+            break
+
+# Calculate the total distance of the TSP tour
+total_distance = sum(graph[permutation[i]][permutation[(i + 1) % num_cities]] for i in range(num_cities))
+
+# Print the optimal permutation and total distance
+print("Optimal Permutation:", permutation)
+print("Total Distance:", total_distance)
